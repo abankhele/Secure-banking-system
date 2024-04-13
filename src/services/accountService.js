@@ -1,39 +1,37 @@
 import axios from "axios";
 import authHeader from "./authHeader";
-
-const API_URL = "http://localhost:8081/api/v1";
+import { API_URL } from "../utils/config";
+//const API_URL = "http://localhost:8081/api/v1";
 
 
 const getAllAccountsByUserId = () => {
 
-    return axios.get("/api/v1/accounts/", { headers: authHeader() })
+    return axios.get(`${API_URL}/api/v1/accounts/`, { headers: authHeader() })
+
+};
+const getuserdetails = () => {
+    console.log("in user details");
+    return axios.get(`${API_URL}/api/v1/users/`, { headers: authHeader() })
 
 };
 const listAllAccountsAdmin = () => {
 
-    return axios.get("/api/v1/accounts/all/", { headers: authHeader() })
+    return axios.get(`${API_URL}/api/v1/accounts/all/`, { headers: authHeader() })
 
 };
-const getQRCode = (userName) => {
-    const config = {
-        headers: authHeader(),
-    };
-    console.log("confog", config)
-      return axios.get("api/v1/auth/generate", config)
-        .then((response) => {
-            console.log(response.data);
-            return response.data;
-        })
-        .catch((error) => {
-            console.error('Error fetching QR code:', error);
-            throw error; 
-        });
+const getpendingtransactions = () => {
+
+    return axios.get(`${API_URL}/api/v1/transactions/pending`, { headers: authHeader() })
+
 };
 
 const postService = {
     getAllAccountsByUserId,
     listAllAccountsAdmin,
-    getQRCode,
+    getpendingtransactions,
+    getuserdetails
+
+
 };
 
 export default postService;

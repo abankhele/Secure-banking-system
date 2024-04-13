@@ -45,6 +45,7 @@ const ViewAllAccounts = () => {
                                                 User ID: {account.userId}<br />
                                                 Phone Number:{account.phoneNumber}<br />
 
+
                                             </Card.Text>
                                         </Card.Body>
                                     </Card>

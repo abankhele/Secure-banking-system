@@ -1,15 +1,23 @@
-import axios from 'axios';
-import authHeader from "./authHeader";
 
-const API_URL = "http://localhost:8081/api/v1/auth";
+import authHeader from "./authHeader";
+import { api } from "../utils/create";
+import { API_URL } from '../utils/config';
+import axios from "axios";
+
 
 const signup = (firstName, lastName, emailid, password) => {
     return axios
-        .post("/api/v1/auth/signup", {
-            firstname: firstName,
-            lastname: lastName,
+        .post(`${API_URL}/api/v1/auth/signup`, {
+            firstName: firstName,
+            lastName: lastName,
             email: emailid,
             password: password,
+        }, {
+            headers: {
+                "Content-Type": "application/json",
+
+                "Access-Control-Allow-Origin": "*"
+            }
         })
         .then((response) => {
             if (response.data.token) {
@@ -22,12 +30,23 @@ const signup = (firstName, lastName, emailid, password) => {
         });
 };
 
-const login = (email, password) => {
-    return axios
-        .post("/api/v1/auth/signin", {
-            email: email,
-            password: password,
-        })
+const login = async (email, password) => {
+    const loginvar = {
+        email: email,
+        password: password
+    }
+    console.log("the params", loginvar)
+    return await axios.post(`${API_URL}/api/v1/auth/signin`, {
+        email: email,
+        password: password
+    }, {
+        headers: {
+            "Content-Type": "application/json",
+
+            "Access-Control-Allow-Origin": "*"
+        }
+    })
+
         .then((response) => {
             if (response.data.token) {
                 localStorage.setItem("user", JSON.stringify(response.data));
@@ -36,17 +55,51 @@ const login = (email, password) => {
             return response.data;
         });
 };
+
 const validateotp = (username, code) => {
-    return axios
-        .post("/api/v1/auth/validate/key", {
-            username: username,
-            code: code,
-        })
+    console.log('username', username);
+    console.log('code', code);
+
+    const config = {
+        headers: authHeader()
+
+    };
+    console.log(config);
+
+    const payload = {
+        username: username,
+        code: code
+
+    };
+    return axios.post(`${API_URL}/api/v1/auth/validate/key`, payload, config)
         .then((response) => {
             return response.data;
         });
 };
 
+
+
+const getQRCode = async (userName) => {
+    try {
+        const config = {
+            headers: authHeader(),
+            responseType: 'blob' 
+        };
+
+        const payload = {
+            userName: userName,
+        };
+
+        const response = await axios.post(`${API_URL}/api/v1/auth/generate/`, payload, config);
+
+   
+        const srcForImage = URL.createObjectURL(response.data);
+        return srcForImage;
+    } catch (error) {
+        console.error('Error fetching QR code:', error);
+        throw error;
+    }
+};
 
 
 
@@ -64,7 +117,8 @@ const authService = {
     logout,
     getCurrentUser,
     validateotp,
-    
+    getQRCode
+
 
 };
 
