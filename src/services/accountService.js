@@ -26,7 +26,7 @@ const listAllAccountsAdmin = () => {
 };
 const getpendingtransactions = () => {
 
-    return axios.get(`${API_URL}/api/v1/transactions/pending`, { headers: authHeader() })
+    return axios.get(`${API_URL}/api/v1/transactions/adminpending`, { headers: authHeader() })
 
 };
 

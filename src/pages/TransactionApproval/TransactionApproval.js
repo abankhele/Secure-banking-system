@@ -1,11 +1,10 @@
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
-import { Link } from 'react-router-dom';
-import postService from '../../services/accountService';
-import { useState, useEffect,useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import UserNavbar from '../../components/Navbar/Navbar';
 import { useNavigate } from 'react-router-dom';
-import accountPost from '../../services/accountPost';
-
+import postService from '../../services/accountService';
+import accountService from '../../services/accountPost';
 
 const TransactionApproval = () => {
     const [approvals, setApprovals] = useState([]);
@@ -17,86 +16,78 @@ const TransactionApproval = () => {
     const fetchPendingTransactions = useCallback(() => {
         setIsLoading(true);
         postService.getpendingtransactions()
-            .then((response) => {
-                console.log("hi");
+            .then(response => {
                 setApprovals(response.data);
                 setIsLoading(false);
             })
-            .catch((error) => {
+            .catch(error => {
                 console.error('Error fetching pending transactions:', error);
                 setError(error.response?.data?.message || 'An error occurred while fetching pending transactions.');
                 setIsLoading(false);
-            }
-            );
+            });
+    }, []);
 
-            
-
-    },[approvals.accountId])
     useEffect(() => {
         fetchPendingTransactions();
     }, [fetchPendingTransactions]);
 
     const approveTransaction = async (transactionId, boolValue) => {
-        console.log(transactionId);
         setIsLoading(true);
         setError(null);
         setSuccessMessage('');
 
         try {
-
-            const response = await accountPost.approvetransaction(transactionId, boolValue);
+            console.log(transactionId,boolValue);
+            const response = await accountService.approvetransaction(transactionId, boolValue);
             console.log("Status from server", response);
             setSuccessMessage(response);
+            fetchPendingTransactions();  // Refresh the list after action
         } catch (err) {
-            console.log(err);
-            setError(err.response?.data?.message || 'An error occurred');
+            console.error("Error during transaction approval:", err);
+            setError(err.response?.data?.message || 'An error occurred during transaction approval.');
         } finally {
             setIsLoading(false);
         }
-
     }
 
-
     return (
-        <div className="container">
-            <div className="mt-4">
-                <div className="mb-4">
-                    {isLoading ? (
-                        <div>Loading pending approvals</div>
-                    ) : (
-                        <>
-
-                            {error && <div className="alert alert-danger mt-3">{error}</div>}
-                            {approvals.map((approval) => (
-                                <div key={approval.id} className='mb-4'>
-                                    <Card border="dark" style={{ width: '40 rem' }}>
-                                        <Card.Header>Account UserID: {approval.userId}</Card.Header>
-                                        <Card.Body>
-                                            <Card.Title>Account Number: {approval.accountId}</Card.Title>
-                                            <Card.Text>
-                                                Amount: {approval.amount}<br />
-                                                Transaction Type: {approval.transactionType}<br />
-                                                Transaction ID: {approval.transactionId}<br />
-                                                Transaction Time: {approval.transactionTime}<br /><br />
-                                                <Button variant="success" disabled={isLoading} onClick={() => approveTransaction(approval.transactionId, true)}>
-                                                    {isLoading ? 'Approving Transaction...' : 'Approve Transaction'}
-                                                </Button>   {'  '}
-                                                <Button variant="danger" disabled={isLoading} onClick={() => approveTransaction(approval.transactionId, false)}>
-                                                    {isLoading ? 'Cancelling Transaction...' : 'Cancel Transaction'}
-                                                </Button>
-
-
-
-                                            </Card.Text>
-                                        </Card.Body>
-                                    </Card>
-                                </div>
-                            ))}
-                        </>
-                    )}
-                </div>
+        <>
+            <UserNavbar />
+            <div className="container">
+                <h2 className='mt-4 mb-4'>Pending Transactions</h2>
+                {successMessage && <div alert alert-success mt-4>{successMessage}</div>}
+                {isLoading ? (
+                    <div>Loading pending approvals...</div>
+                ) : error ? (
+                    <div className="alert alert-danger">{error}</div>
+                ) : (
+                    approvals.map((approval) => (
+                        <Card key={approval.transactionId} className="mb-4">
+                            <Card.Header>Transaction ID: {approval.transactionId}</Card.Header>
+                            <Card.Body>
+                                <Card.Title>From Account: {approval.fromAccountId}</Card.Title>
+                                <Card.Text>
+                                    Amount: ${approval.amount.toFixed(2)}<br />
+                                    Type: {approval.transactionType}<br />
+                                    Status: {approval.status}<br />
+                                    Transaction Time: {new Date(approval.transactionTime).toLocaleString()}<br />
+                                    {approval.transactionType !== "DEBIT" && approval.transactionType !== "CREDIT" && (
+                                        <>To Account: {approval.toAccountId}<br /></>
+                                    )}
+                                    <Button variant="success" disabled={isLoading} onClick={() => approveTransaction(approval.transactionId, true)}>
+                                        Approve
+                                    </Button>
+                                    {' '}
+                                    <Button variant="danger" disabled={isLoading} onClick={() => approveTransaction(approval.transactionId, false)}>
+                                        Cancel
+                                    </Button>
+                                </Card.Text>
+                            </Card.Body>
+                        </Card>
+                    ))
+                )}
             </div>
-        </div>
+        </>
     );
 }
 

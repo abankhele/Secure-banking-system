@@ -32,18 +32,21 @@ const Login = () => {
                     console.log("In");
                     setShow2FA(true);
                     handleShow();
+                    setError('');
                     // navigate("/doubleauthentication");
                     // window.location.reload();
                 },
                 (error) => {
                     setShow2FA(false);
                     console.log(error);
+                    setError('Invalid emailid or password');
                 }
             );
 
         } catch (err) {
             setShow2FA(false);
             console.log(err);
+            setError(error.message);
         }
     };
 
