@@ -83,7 +83,7 @@ const getQRCode = async (userName) => {
     try {
         const config = {
             headers: authHeader(),
-            responseType: 'blob' 
+            responseType: 'blob'
         };
 
         const payload = {
@@ -92,13 +92,26 @@ const getQRCode = async (userName) => {
 
         const response = await axios.post(`${API_URL}/api/v1/auth/generate/`, payload, config);
 
-   
+
         const srcForImage = URL.createObjectURL(response.data);
         return srcForImage;
     } catch (error) {
         console.error('Error fetching QR code:', error);
         throw error;
     }
+};
+
+const loggingoff = async () => {
+
+    const config = {
+        headers: authHeader()
+    };
+
+
+    return axios.post(`${API_URL}/api/v1/auth/signout`, {}, config)
+        .then((response) => {
+            return response.data;
+        });
 };
 
 
@@ -117,7 +130,8 @@ const authService = {
     logout,
     getCurrentUser,
     validateotp,
-    getQRCode
+    getQRCode,
+    loggingoff
 
 
 };

@@ -107,6 +107,22 @@ const updateaccount = (userDetails) => {
         });
 };
 
+const deleteacc = (accNumber) => {
+
+    const config = {
+        headers: authHeader()
+    };
+
+    console.log("account number passed while deleting", accNumber);
+
+
+
+    return axios.delete(`${API_URL}/api/v1/accounts/delete?accountId=${accNumber}`, config)
+        .then((response) => {
+            return response.data;
+        });
+};
+
 const approvetransaction = (transactionId, approve) => {
 
     const config = {
@@ -132,7 +148,8 @@ const accountService = {
     updateaccount,
     approvetransaction,
     transferamount,
-    requestamount
+    requestamount,
+    deleteacc
 
 };
 

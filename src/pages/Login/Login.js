@@ -58,7 +58,7 @@ const Login = () => {
 
                     console.log("got otp", response);
                     if (response.valid == true) {
-                        navigate("/");
+                        navigate("/dashboard");
                     }
                     else if (response.valid == false) {
                         setError("Invalid OTP.Please try again");

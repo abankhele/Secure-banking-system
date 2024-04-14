@@ -9,6 +9,11 @@ const getAllAccountsByUserId = () => {
     return axios.get(`${API_URL}/api/v1/accounts/`, { headers: authHeader() })
 
 };
+const getcustomertransaction = () => {
+
+    return axios.get(`${API_URL}/api/v1/transactions/customer`, { headers: authHeader() })
+
+};
 const getuserdetails = () => {
     console.log("in user details");
     return axios.get(`${API_URL}/api/v1/users/`, { headers: authHeader() })
@@ -29,7 +34,8 @@ const postService = {
     getAllAccountsByUserId,
     listAllAccountsAdmin,
     getpendingtransactions,
-    getuserdetails
+    getuserdetails,
+    getcustomertransaction
 
 
 };

@@ -1,30 +1,43 @@
 import Container from 'react-bootstrap/Container';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import authService from '../../services/authService';
 const UserNavbar = () => {
-    return (
+    const navigate = useNavigate();
 
+    const handleLogout = () => {
+        authService.loggingoff()
+            .then(response => {
 
+                console.log("Logged out successfully");
 
-        <Navbar bg="primary" data-bs-theme="dark">
+                authService.logout();
+                navigate('/');
+            })
+            .catch(error => {
+                console.error("Logout failed", error);
+
+            });
+    };
+
+    return (<>
+
+        <Navbar bg="primary" variant="dark">
             <Container>
-                <Navbar.Brand href="/">Secure Banking System</Navbar.Brand>
+                <Navbar.Brand as={Link} to="/dashboard">Secure Banking System</Navbar.Brand>
                 <Navbar.Toggle />
-                <Navbar.Collapse className="justify-content-end">
-
-                    <Navbar.Text >
+                <Navbar.Collapse id="justify-content-end">
+                    <Navbar.Text>
                         <Nav className="me-auto">
-                            <Nav.Link href="/userprofile">User Profile</Nav.Link>
-                            <Nav.Link href="/logout">Logout</Nav.Link>
+                            <Nav.Link as={Link} to="/userprofile">User Profile</Nav.Link>
+                            <Nav.Link onClick={handleLogout} to="/">Logout</Nav.Link>
                         </Nav>
                     </Navbar.Text>
                 </Navbar.Collapse>
             </Container>
         </Navbar>
-
-
-
+    </>
     )
 }
 export default UserNavbar;

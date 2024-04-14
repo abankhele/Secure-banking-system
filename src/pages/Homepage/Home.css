@@ -1,0 +1,30 @@
+.home-page .home-content {
+    height: 80vh;
+    background-image: url("../../assests/image/banking.jpeg");
+    background-size: cover;
+    background-position: 25% 75%;
+    display: flex;
+    justify-content: center;
+}
+
+.home-page .home-introduction {
+    margin-top: 100px;
+    text-align: center;
+}
+
+.home-page .home-introduction h2 {
+    font-size: 30px;
+    color: aliceblue
+}
+
+.home-page .home-introduction p {
+    font-size: 18px;
+    color: aliceblue
+}
+
+.home-page .home-footer {
+    height: 10vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

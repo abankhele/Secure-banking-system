@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Card from 'react-bootstrap/Card';
 import Tab from 'react-bootstrap/Tab';
@@ -9,6 +9,8 @@ import { useState, useEffect, useCallback } from 'react';
 import accountService from '../../services/accountPost';
 import postService from '../../services/accountService';
 import UserNavbar from '../../components/Navbar/Navbar';
+import authService from '../../services/authService';
+import Modal from 'react-bootstrap/Modal';
 const AccountDetails = () => {
     const location = useLocation();
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -31,6 +33,67 @@ const AccountDetails = () => {
     const [reqAccNumber, setReqAccNumber] = useState('');
     const [requestError, setRequestError] = useState(false);
     const [requestSuccessMessage, setRequestSuccessMessage] = useState('');
+
+    const [deleteError, setdeleteError] = useState(false);
+    const [deletesuccessmsg, setdeletesuccessmsg] = useState('');
+    const navigate = useNavigate();
+
+    const [otpsuccess, setotpsuccess] = useState(false);
+    const [otperror, setotperror] = useState('');
+    const [show2FA, setShow2FA] = useState(false);
+    const [twoFACode, setTwoFACode] = useState('');
+    const [show, setShow] = useState(false);
+    const [email, setEmail] = useState('');
+    const [actionAfterOtp, setActionAfterOtp] = useState(null);
+
+
+    const [currentAction, setCurrentAction] = useState(null);
+
+    const handleClose = () => setShow(false);
+    const handleShow = () => setShow(true);
+    useEffect(() => {
+        setIsLoading(true);
+        postService.getuserdetails()
+            .then((response) => {
+                setEmail(response.data.email);
+                setIsLoading(false);
+
+            })
+            .catch((error) => {
+                console.log("An error occured while fetching email");
+
+            });
+    }, []);
+
+
+    const validateOTP = async (email, otp) => {
+        try {
+            const response = await authService.validateotp(email, otp);
+            return response.valid;
+        } catch (error) {
+            console.error('Error during OTP validation:', error);
+            return false;
+        }
+    };
+
+    const initiateDeleteAccount = (accNumber1) => {
+        setActionAfterOtp(() => () => handleDeleteAccount(accNumber1));
+        setShow(true);
+    };
+
+    const handleDeleteAccount = async (accNumber) => {
+        try {
+            const deleteResponse = await accountService.deleteacc(accNumber);
+            console.log("Account deleted successfully:", deleteResponse);
+            setdeletesuccessmsg("Account successfully deleted.");
+            navigate('/account-info');
+        } catch (error) {
+            console.error("Failed to delete account:", error);
+            setdeleteError("Failed to delete account.");
+        }
+    };
+
+
     const fetchAccountDetails = useCallback(() => {
         postService.getAllAccountsByUserId()
             .then((response) => {
@@ -47,73 +110,121 @@ const AccountDetails = () => {
     }, [account.accountNumber]);
 
     useEffect(() => {
-        fetchAccountDetails();//mounting(after api i'll remove)
+        fetchAccountDetails();
     }, [fetchAccountDetails]);
-
-
+    //CREDIT
     const handlecredit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setCreditError(null);
-        setCreditSuccessMessage('');
-        try {
 
-            const response = await accountService.creditAccount(account.accountNumber, creditAmount);
-            console.log("Status from server", response);
+        if (parseFloat(creditAmount) > 1000) {
+
+            setActionAfterOtp(() => async () => {
+                await processCreditTransaction(accountDetails.accountNumber, creditAmount);
+            });
+            setShow(true);
+        } else {
+
+            await processCreditTransaction(accountDetails.accountNumber, creditAmount);
+        }
+    };
+
+    const handleOtpSubmission = async (e) => {
+        e.preventDefault();
+        const isValid = await validateOTP(email, twoFACode);
+        if (isValid) {
+            actionAfterOtp();
+            setotpsuccess(true);
+            setShow(false);
+            setotperror('');
+        } else {
+            setotperror("Invalid OTP. Please try again.");
+            setotpsuccess(false);
+        }
+    };
+
+    const processCreditTransaction = async (accountNumber, amount) => {
+        setIsLoading(true);
+        try {
+            const response = await accountService.creditAccount(accountNumber, amount);
+            console.log("Credit transaction successful:", response);
             setCreditSuccessMessage(response);
             fetchAccountDetails();
         } catch (err) {
             const detailedErrorMessage = err.response ? JSON.stringify(err.response.data, null, 2) : 'An error occurred during the credit operation.';
-            console.error("Error during debit operation:", detailedErrorMessage);
+            console.error("Credit operation error:", detailedErrorMessage);
             setCreditError(detailedErrorMessage);
         } finally {
             setIsLoading(false);
         }
-    }
+    };
+
+
+
+    //DEBIT
     const handledebit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setDebitError(null);
         setDebitSuccessMessage('');
 
+        if (parseFloat(debitAmount) > 1000) {
+            setActionAfterOtp(() => async () => {
+                await processDebitTransaction(accountDetails.accountNumber, debitAmount);
+            });
+            setShow(true);
+        } else {
+            await processDebitTransaction(accountDetails.accountNumber, debitAmount);
+        }
+    };
 
+    const processDebitTransaction = async (accountNumber, amount) => {
         try {
-
-            const response = await accountService.debitAmount(account.accountNumber, debitAmount);
-            console.log("Status from server", response);
+            const response = await accountService.debitAmount(accountNumber, amount);
+            console.log("Debit transaction successful:", response);
             setDebitSuccessMessage(response);
             fetchAccountDetails();
         } catch (err) {
             const detailedErrorMessage = err.response ? JSON.stringify(err.response.data, null, 2) : 'An error occurred during the debit operation.';
-            console.error("Error during debit operation:", detailedErrorMessage);
+            console.error("Debit operation error:", detailedErrorMessage);
             setDebitError(detailedErrorMessage);
-
         } finally {
             setIsLoading(false);
         }
-    }
+    };
+
+
     const handletransfer = async (e) => {
         e.preventDefault();
         setIsLoading(true);
         setTransferError(null);
         settransferSuccessMessage('');
-
-
+    
+        if (parseFloat(transferAmount) > 1000) {
+            setActionAfterOtp(() => async () => {
+                await processTransferTransaction(accountDetails.accountNumber, transferAmount, recvAccNumber);
+            });
+            setShow(true); 
+        } else {
+            await processTransferTransaction(accountDetails.accountNumber, transferAmount, recvAccNumber);
+        }
+    };
+    
+    const processTransferTransaction = async (accountNumber, amount, receiverAccountNumber) => {
         try {
-
-            const response = await accountService.transferamount(transferAmount, account.accountNumber, recvAccNumber,);//from ravi to configure
-            console.log("Status from server", response);
+            const response = await accountService.transferamount(amount, accountNumber, receiverAccountNumber);
+            console.log("Transfer transaction successful:", response);
             settransferSuccessMessage(response);
-            fetchAccountDetails();
+            fetchAccountDetails(); 
         } catch (err) {
-            const detailedErrorMessage = err.response ? JSON.stringify(err.response.data, null, 2) : 'An error occurred during the debit operation.';
-            console.error("Error during transfer money operation:", detailedErrorMessage);
+            const detailedErrorMessage = err.response ? JSON.stringify(err.response.data, null, 2) : 'An error occurred during the transfer operation.';
+            console.error("Transfer operation error:", detailedErrorMessage);
             setTransferError(detailedErrorMessage);
-
         } finally {
             setIsLoading(false);
         }
-    }
+    };
 
     const handlerequest = async (e) => {
         e.preventDefault();
@@ -124,7 +235,7 @@ const AccountDetails = () => {
 
         try {
 
-            const response = await accountService.requestamount(requestAmount, account.accountNumber, reqAccNumber,);//from ravi to configure
+            const response = await accountService.requestamount(requestAmount, reqAccNumber, account.accountNumber);//from ravi to configure
             console.log("Status from server", response);
             setRequestSuccessMessage(response);
             fetchAccountDetails();
@@ -151,115 +262,188 @@ const AccountDetails = () => {
                             Account Type: {accountDetails.accountType}<br />
                             Routing Number: {accountDetails.userId}<br />
                             Balance: {accountDetails.balance}<br />
+                            <Button variant="danger mt-4" type="submit" onClick={() => initiateDeleteAccount(accountDetails.accountNumber)}>
+                                Delete Account
+                            </Button>
 
+                            {
+                                <Modal show={show} onHide={handleClose}>
+                                    <Modal.Header closeButton>
+                                        <Modal.Title>Verify OTP</Modal.Title>
+                                    </Modal.Header>
+                                    <Modal.Body>
+                                        <Form onSubmit={handleOtpSubmission}>
+                                            <Form.Group className="mb-3" controlId="formGroupOTP">
+                                                <Form.Label>Enter OTP</Form.Label>
+                                                <Form.Control
+                                                    type="number"
+                                                    placeholder="XXXXXX"
+                                                    value={twoFACode}
+                                                    onChange={(e) => setTwoFACode(e.target.value)}
+                                                    required />
+                                            </Form.Group>
+                                            <Button variant="secondary" type="submit">
+                                                Verify and Proceed
+                                            </Button>
+                                        </Form>
+                                        {otperror && <div className="alert alert-danger mt-4">{otperror}</div>}
+                                    </Modal.Body>
+                                </Modal>
+                            }
 
                             {fetcherror && <div className="alert alert-danger">Error: {fetcherror}</div>}
                         </Card.Text>
                     </Card.Body>
                 </Card>
                 <div className="mt-4">
-                    <Tabs
-                        defaultActiveKey="credit-funds"
-                        id="uncontrolled-tab-example"
-                        className="mb-3"
-                    >
-                        <Tab eventKey="credit-funds" title="Credit Funds">
-                            <div className="mt-4">
-                                <Form onSubmit={handlecredit}>
-                                    <FloatingLabel
+                    {accountDetails.accountType !== "MERCHANT" && (
+                        <>
+                            <Tabs
+                                defaultActiveKey="credit-funds"
+                                id="uncontrolled-tab-example"
+                                className="mb-3"
+                            >
 
-                                        label="Amount to be Credited"
-                                        className="mb-3"
-                                    >
-                                        <Form.Control type="number" placeholder="Amount to be Credited" value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} required />
-                                    </FloatingLabel>
-                                    <Button variant="secondary" type="submit" disabled={isLoading}>
-                                        {isLoading ? 'Submitting...' : 'Submit'}
-                                    </Button>
+                                <Tab eventKey="credit-funds" title="Credit Funds">
+                                    <div className="mt-4">
+                                        <Form onSubmit={handlecredit}>
+                                            <FloatingLabel
 
-
-                                </Form>
-                                {creditSuccessMessage && <div className="alert alert-success mt-4">{creditSuccessMessage}</div>}
-                                {creditError && <div className="alert alert-danger mt-4">Error: {creditError}</div>}
-                            </div>
-                        </Tab>
-                        <Tab eventKey="debit-funds" title="Debit Funds" >
-                            <div className="mt-4">
-                                <Form onSubmit={handledebit}>
-                                    <FloatingLabel
-
-                                        label="Amount to be Debited"
-                                        className="mb-3"
-                                    >
-                                        <Form.Control type="number" placeholder="Amount to be Debited" value={debitAmount} onChange={(e) => setDebitAmount(e.target.value)} required />
-                                    </FloatingLabel>
-                                    <Button variant="secondary" type="submit" disabled={isLoading}>
-                                        {isLoading ? 'Submitting...' : 'Submit'}
-                                    </Button>
-                                    {debitSuccessMessage && <div className="alert alert-success mt-4">{debitSuccessMessage}</div>}
-                                    {debitError && <div className="alert alert-danger mt-4">Error: {debitError}</div>}
+                                                label="Amount to be Credited"
+                                                className="mb-3"
+                                            >
+                                                <Form.Control type="number" placeholder="Amount to be Credited" value={creditAmount} onChange={(e) => setCreditAmount(e.target.value)} required />
+                                            </FloatingLabel>
+                                            <Button variant="secondary" type="submit" disabled={isLoading}>
+                                                {isLoading ? 'Submitting...' : 'Submit'}
+                                            </Button>
 
 
-                                </Form>
-                            </div>
-                        </Tab>
-                        <Tab eventKey="transfer" title="Transfer Funds" >
-                            <div className="mt-4">
-                                <Form onSubmit={handletransfer}>
-                                    <FloatingLabel
+                                        </Form>
+                                        {creditSuccessMessage && <div className="alert alert-success mt-4">{creditSuccessMessage}</div>}
+                                        {creditError && <div className="alert alert-danger mt-4">Error: {creditError}</div>}
+                                    </div>
+                                </Tab>
+                                <Tab eventKey="debit-funds" title="Debit Funds" >
+                                    <div className="mt-4">
+                                        <Form onSubmit={handledebit}>
+                                            <FloatingLabel
 
-                                        label="Account Number of Receiver"
-                                        className="mb-3"
-                                    >
-                                        <Form.Control type="text" placeholder="$" value={recvAccNumber} onChange={(e) => setrecvAccNumber(e.target.value)} required />
-                                    </FloatingLabel>
-
-                                    <FloatingLabel
-
-                                        label="Amount"
-                                        className="mb-3"
-                                    >
-                                        <Form.Control type="number" placeholder="$" value={transferAmount} onChange={(e) => settransferAmount(e.target.value)} required />
-                                    </FloatingLabel>
-                                    <Button variant="secondary" type="submit" disabled={isLoading}>
-                                        {isLoading ? 'Submitting...' : 'Submit'}
-                                    </Button>
-                                    {transferSuccessMessage && <div className="alert alert-success mt-4">{transferSuccessMessage}</div>}
-                                    {transferError && <div className="alert alert-danger mt-4">Error: {transferError}</div>}
+                                                label="Amount to be Debited"
+                                                className="mb-3"
+                                            >
+                                                <Form.Control type="number" placeholder="Amount to be Debited" value={debitAmount} onChange={(e) => setDebitAmount(e.target.value)} required />
+                                            </FloatingLabel>
+                                            <Button variant="secondary" type="submit" disabled={isLoading}>
+                                                {isLoading ? 'Submitting...' : 'Submit'}
+                                            </Button>
+                                            {debitSuccessMessage && <div className="alert alert-success mt-4">{debitSuccessMessage}</div>}
+                                            {debitError && <div className="alert alert-danger mt-4">Error: {debitError}</div>}
 
 
-                                </Form>
-                            </div>
-                        </Tab>
-                        <Tab eventKey="request" title="Request Funds" >
-                            <div className="mt-4">
-                                <Form onSubmit={handlerequest}>
-                                    <FloatingLabel
+                                        </Form>
+                                    </div>
+                                </Tab>
+                                <Tab eventKey="transfer" title="Transfer Funds" >
+                                    <div className="mt-4">
+                                        <Form onSubmit={handletransfer}>
+                                            <FloatingLabel
 
-                                        label="Request From Account Number"
-                                        className="mb-3"
-                                    >
-                                        <Form.Control type="text" placeholder="$" value={reqAccNumber} onChange={(e) => setReqAccNumber(e.target.value)} required />
-                                    </FloatingLabel>
+                                                label="Account Number of Receiver"
+                                                className="mb-3"
+                                            >
+                                                <Form.Control type="text" placeholder="$" value={recvAccNumber} onChange={(e) => setrecvAccNumber(e.target.value)} required />
+                                            </FloatingLabel>
 
-                                    <FloatingLabel
+                                            <FloatingLabel
 
-                                        label="Amount"
-                                        className="mb-3"
-                                    >
-                                        <Form.Control type="number" placeholder="$" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)} required />
-                                    </FloatingLabel>
-                                    <Button variant="secondary" type="submit" disabled={isLoading}>
-                                        {isLoading ? 'Requesting...' : 'Request'}
-                                    </Button>
-                                    {requestSuccessMessage && <div className="alert alert-success mt-4">{requestSuccessMessage}</div>}
-                                    {requestError && <div className="alert alert-danger mt-4">Error: {requestError}</div>}
+                                                label="Amount"
+                                                className="mb-3"
+                                            >
+                                                <Form.Control type="number" placeholder="$" value={transferAmount} onChange={(e) => settransferAmount(e.target.value)} required />
+                                            </FloatingLabel>
+                                            <Button variant="secondary" type="submit" disabled={isLoading}>
+                                                {isLoading ? 'Submitting...' : 'Submit'}
+                                            </Button>
+                                            {transferSuccessMessage && <div className="alert alert-success mt-4">{transferSuccessMessage}</div>}
+                                            {transferError && <div className="alert alert-danger mt-4">Error: {transferError}</div>}
 
 
-                                </Form>
-                            </div>
-                        </Tab>
-                    </Tabs>
+                                        </Form>
+                                    </div>
+                                </Tab>
+
+                                <Tab eventKey="request" title="Request Funds" >
+                                    <div className="mt-4">
+                                        <Form onSubmit={handlerequest}>
+                                            <FloatingLabel
+
+                                                label="Request From Account Number"
+                                                className="mb-3"
+                                            >
+                                                <Form.Control type="text" placeholder="$" value={reqAccNumber} onChange={(e) => setReqAccNumber(e.target.value)} required />
+                                            </FloatingLabel>
+
+                                            <FloatingLabel
+
+                                                label="Amount"
+                                                className="mb-3"
+                                            >
+                                                <Form.Control type="number" placeholder="$" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)} required />
+                                            </FloatingLabel>
+                                            <Button variant="secondary" type="submit" disabled={isLoading}>
+                                                {isLoading ? 'Requesting...' : 'Request'}
+                                            </Button>
+                                            {requestSuccessMessage && <div className="alert alert-success mt-4">{requestSuccessMessage}</div>}
+                                            {requestError && <div className="alert alert-danger mt-4">Error: {requestError}</div>}
+
+
+                                        </Form>
+                                    </div>
+                                </Tab>
+                            </Tabs>
+                        </>)}
+                    <div className="mt-4">
+                        {accountDetails.accountType === "MERCHANT" && (
+                            <>
+                                <Tabs
+                                    defaultActiveKey="request"
+                                    id="uncontrolled-tab-example1"
+                                    className="mb-3">
+
+                                    <Tab eventKey="request" title="Request Funds" >
+                                        <div className="mt-4">
+                                            <Form onSubmit={handlerequest}>
+                                                <FloatingLabel
+
+                                                    label="Request From Account Number"
+                                                    className="mb-3"
+                                                >
+                                                    <Form.Control type="text" placeholder="$" value={reqAccNumber} onChange={(e) => setReqAccNumber(e.target.value)} required />
+                                                </FloatingLabel>
+
+                                                <FloatingLabel
+
+                                                    label="Amount"
+                                                    className="mb-3"
+                                                >
+                                                    <Form.Control type="number" placeholder="$" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)} required />
+                                                </FloatingLabel>
+                                                <Button variant="secondary" type="submit" disabled={isLoading}>
+                                                    {isLoading ? 'Requesting...' : 'Request'}
+                                                </Button>
+                                                {requestSuccessMessage && <div className="alert alert-success mt-4">{requestSuccessMessage}</div>}
+                                                {requestError && <div className="alert alert-danger mt-4">Error: {requestError}</div>}
+
+
+                                            </Form>
+                                        </div>
+                                    </Tab>
+
+                                </Tabs>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

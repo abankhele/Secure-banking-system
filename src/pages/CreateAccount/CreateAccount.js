@@ -43,7 +43,7 @@ const CreateAccount = () => {
 
     return (
         <div className="content">
-            <UserNavbar/>
+            <UserNavbar />
             <div className="container">
 
                 <div className="mt-4">
@@ -59,6 +59,7 @@ const CreateAccount = () => {
                                 <option value="" disabled>Choose...</option>
                                 <option value="CHECKING">Checking Account</option>
                                 <option value="SAVINGS">Savings Account</option>
+                                <option value="MERCHANT">Merchant Account</option>
                             </Form.Select>
                         </Form.Group>
 
