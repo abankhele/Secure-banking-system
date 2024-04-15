@@ -35,27 +35,29 @@ const TransactionApproval = () => {
         setIsLoading(true);
         setError(null);
         setSuccessMessage('');
-
+    
         try {
-            console.log(transactionId,boolValue);
+            console.log(transactionId, boolValue);
             const response = await accountService.approvetransaction(transactionId, boolValue);
             console.log("Status from server", response);
-            setSuccessMessage(response);
-            fetchPendingTransactions();  // Refresh the list after action
+            setSuccessMessage('Transaction processed successfully.');
+            fetchPendingTransactions();  
         } catch (err) {
-            console.error("Error during transaction approval:", err);
-            setError(err.response?.data?.message || 'An error occurred during transaction approval.');
+            console.error("Error during transaction approval:", err.message);
+            const detailedErrorMessage = err.response ? JSON.stringify(err.response.data, null, 2) : 'An error occurred during transaction approval.';
+            setError(detailedErrorMessage);
         } finally {
             setIsLoading(false);
         }
     }
+    
 
     return (
         <>
             <UserNavbar />
             <div className="container">
                 <h2 className='mt-4 mb-4'>Pending Transactions</h2>
-                {successMessage && <div alert alert-success mt-4>{successMessage}</div>}
+                {successMessage && <div className=' alert alert-success mt-4'>{successMessage}</div>}
                 {isLoading ? (
                     <div>Loading pending approvals...</div>
                 ) : error ? (

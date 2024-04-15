@@ -8,13 +8,15 @@ import Card from 'react-bootstrap/Card';
 const Transactionhistory = () => {
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Function to fetch transactions
     const fetchTransactions = () => {
         setIsLoading(true);
         postService.getcustomertransaction()
             .then((response) => {
-                // Initialize error and success messages for each transaction
+
                 const updatedTransactions = response.data.map(transaction => ({
                     ...transaction,
                     errorMessage: '',
@@ -36,19 +38,25 @@ const Transactionhistory = () => {
 
     const approveTransaction = async (transactionId, boolValue) => {
         setIsLoading(true);
+        setError(null);
+        setSuccessMessage('');
+
         try {
+            console.log(transactionId, boolValue);
             const response = await accountPost.approvetransaction(transactionId, boolValue);
-            // Assuming response includes a success message
             console.log("Status from server", response);
-            fetchTransactions();  // Refetch transactions to update the UI
+            setSuccessMessage(response);
+            fetchTransactions();
         } catch (err) {
             console.error('Error updating transaction:', err);
-            // Assuming err.response?.data?.message contains the error message
-            // Set error at the transaction level if required or show a toast/notification
+            const detailedErrorMessage = err.response ? JSON.stringify(err.response.data, null, 2) : 'An error occurred during transaction approval.';
+            setError(detailedErrorMessage);
+            fetchTransactions();
         } finally {
             setIsLoading(false);
         }
     };
+
 
     const getStatusMessage = (status) => {
         switch (status) {
@@ -61,7 +69,7 @@ const Transactionhistory = () => {
             case 'DECLINED':
                 return 'Declined';
             default:
-                return 'Status Unknown'; 
+                return 'Status Unknown';
         }
     };
 
@@ -70,6 +78,8 @@ const Transactionhistory = () => {
             <UserNavbar />
             <div className="container">
                 <div className="mt-4">
+                    {successMessage && <div className=' alert alert-success mt-4'>{successMessage}</div>}
+                    {error && <div className="alert alert-danger">{error}</div>}
                     <div className="mb-4">
                         {isLoading ? (
                             <div>Loading pending transactions...</div>
@@ -80,13 +90,17 @@ const Transactionhistory = () => {
                                         <Card border="dark" style={{ width: '40 rem' }}>
                                             <Card.Header>My Account Number: {transaction.fromAccountId}</Card.Header>
                                             <Card.Body>
-                                                <Card.Title>Account Transferred To: {transaction.toAccountId}</Card.Title>
+                                                <Card.Title>Transaction ID: {transaction.transactionId}<br /></Card.Title>
                                                 <Card.Text>
+                                                    {transaction.transactionType !== "DEBIT" && transaction.transactionType !== "CREDIT" && (
+                                                        <>To Account: {transaction.toAccountId}<br /></>
+                                                    )}
                                                     Amount: ${transaction.amount}<br />
                                                     Transaction Type: {transaction.transactionType}<br />
                                                     Transaction Status: {getStatusMessage(transaction.status)}<br />
-                                                    Transaction ID: {transaction.transactionId}<br />
-                                                    Transaction Time: {transaction.transactionTime}<br /><br />
+
+                                                    Transaction Time: {transaction.transactionTime}<br />
+
                                                     {transaction.status == 'PENDING_CUSTOMER' && <>
                                                         <Button variant="success" disabled={isLoading} onClick={() => approveTransaction(transaction.transactionId, true)}>
                                                             Approve Transaction
